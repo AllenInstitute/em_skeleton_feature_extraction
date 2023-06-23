@@ -1,0 +1,8 @@
+numpy
+meshparty
+orjson
+standard_transform
+scikit-learn
+pandas
+cloud-files
+pathos
