@@ -84,7 +84,7 @@ def syn_depth_dist(nrn, compartment=None):
             nrn.anno[anno_mask_dict[compartment]].mesh_mask
         ).df
     if len(df) > 0:
-        return np.vstack(df["ctr_pt_position"])[:, 1].copy(order='C')
+        return np.vstack(df["ctr_pt_position"])[:, 1].copy(order="C")
     else:
         return np.ascontiguousarray([])
 
@@ -139,7 +139,7 @@ def horizontal_extent(nrn, rdist_func, compartment=None):
             )
             if len(d) == 0:
                 return None
-        return np.percentile(d, 97).copy(order='C')
+        return np.percentile(d, 97).copy(order="C")
     except:
         return None
 
@@ -246,8 +246,9 @@ def extract_features_dict(
     depth_bins,
     egocentric_bins,
     sl_dataset,
+    synapse_transform="nm",
 ):
-    nrn = pre_transform_neuron(nrn, sl_dataset)
+    nrn = pre_transform_neuron(nrn, sl_dataset, synapse_transform=synapse_transform)
     return {
         "root_id": nrn.seg_id,
         "soma_depth": soma_depth(nrn),
@@ -286,12 +287,19 @@ def extract_features(
     feature_dir=None,
     filename=None,
     n_egocentric_bins=14,
+    synapse_transform="nm",
 ):
     try:
         depth_bins = make_depth_bins(height_bounds)
         egocentric_bins = make_egocentric_bins(100, n_egocentric_bins)
         features = extract_features_dict(
-            nrn, radius_bins, radius_bin_width, depth_bins, egocentric_bins, sl_dataset
+            nrn,
+            radius_bins,
+            radius_bin_width,
+            depth_bins,
+            egocentric_bins,
+            sl_dataset,
+            synapse_transform,
         )
     except:
         features = {
@@ -314,6 +322,8 @@ def extract_features_root_id(
     feature_dir,
     n_egocentric_bins=14,
     rerun=False,
+    peel_threshold=0,
+    synapse_transform="nm",
 ):
     if os.path.exists(f"{feature_dir}/{root_id}.json") and not rerun:
         with open(f"{feature_dir}/{root_id}.json") as f:
@@ -321,13 +331,14 @@ def extract_features_root_id(
             if dat["success"] is True:
                 return True
     try:
-        nrn = load_root_id(root_id, skel_dir)
+        nrn = load_root_id(root_id, skel_dir, peel_threshold=peel_threshold)
         features = extract_features(
             nrn,
             height_bounds,
             sl_dataset,
             feature_dir=feature_dir,
             n_egocentric_bins=n_egocentric_bins,
+            synapse_transform=synapse_transform,
         )
         return features["success"]
     except Exception as e:
@@ -342,6 +353,8 @@ def extract_features_mp(
     sl_dataset,
     feature_dir,
     n_egocentric_bins=14,
+    peel_threshold=0,
+    synapse_transform="nm",
     rerun=False,
     nodes=8,
 ):
@@ -356,5 +369,7 @@ def extract_features_mp(
             [feature_dir] * len(root_ids),
             [n_egocentric_bins] * len(root_ids),
             [rerun] * len(root_ids),
+            [peel_threshold] * len(root_ids),
+            [synapse_transform] * len(root_ids),
         )
     )

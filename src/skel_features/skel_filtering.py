@@ -94,7 +94,8 @@ def low_proximate_dendrite_mask(nrn, prox=30, path_dens_th=0.1, path_len_th=20):
         dendrite_mask = np.full(nrn.mesh.n_vertices, True)
     return dendrite_mask
 
-def apply_dendrite_mask(nrn, sq_th=0.6):
+
+def apply_dendrite_mask(nrn, sq_th=0.4):
     """
     Use either axon/dendrite split or the low_proximate_dendrite_mask function above to get a dendrite mask.
     """
@@ -111,11 +112,14 @@ def apply_dendrite_mask(nrn, sq_th=0.6):
     nrn.apply_mask(dendrite_mask)
     return nrn
 
+
 def add_axon_annotation(nrn):
     if "is_axon" not in nrn.anno.table_names:
         if len(nrn.anno.pre_syn) > 0 and len(nrn.anno.post_syn) > 0:
             is_axon, split_quality = meshwork.algorithms.split_axon_by_annotation(
-                nrn, 'pre_syn', 'post_syn',
+                nrn,
+                "pre_syn",
+                "post_syn",
             )
         else:
             split_quality = -1
@@ -123,6 +127,7 @@ def add_axon_annotation(nrn):
 
         nrn.anno.add_annotations("is_axon", is_axon, mask=True)
     pass
+
 
 def annotate_apical_from_syn_df(nrn, syn_df):
     "Use pre-classified synapse labels to infer skeleton labels"
@@ -152,8 +157,8 @@ def additional_component_masks(nrn, peel_threshold=0.1):
     "Apply soma, basal dendrite, and generic dendrite masks to a neuron"
 
     apply_dendrite_mask(nrn)
-    if peel_threshold is not None:
-        peel_sparse_segments(nrn, 0.1)
+    if peel_threshold is not None or peel_threshold > 0:
+        peel_sparse_segments(nrn, peel_threshold)
     dend_mask = nrn.mesh_mask.copy()
     nrn.reset_mask()
 
@@ -162,12 +167,18 @@ def additional_component_masks(nrn, peel_threshold=0.1):
     )
     nrn.anno.add_annotations(anno_mask_dict["soma"], nrn.root_region, mask=True)
 
-def pre_transform_neuron(nrn, st_dataset):
+
+def pre_transform_neuron(nrn, st_dataset, synapse_transform="nm"):
     nrn.skeleton.vertices = st_dataset.transform_nm.apply(nrn.skeleton.vertices)
-    
-    for tbl in ['pre_syn', 'post_syn']:
-        for col in ['pre_pt_position', 'ctr_pt_position', 'post_pt_position']:
-            nrn.anno[tbl]._data[col] = st_dataset.transform_vx.apply(
-                nrn.anno[tbl]._data[col]
-            )
+
+    for tbl in ["pre_syn", "post_syn"]:
+        for col in ["pre_pt_position", "ctr_pt_position", "post_pt_position"]:
+            if synapse_transform == "nm":
+                nrn.anno[tbl]._data[col] = st_dataset.transform_nm.apply(
+                    nrn.anno[tbl]._data[col]
+                )
+            elif synapse_transform == "vx":
+                nrn.anno[tbl]._data[col] = st_dataset.transform_vx.apply(
+                    nrn.anno[tbl]._data[col]
+                )
     return nrn

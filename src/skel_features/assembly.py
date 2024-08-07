@@ -2,6 +2,7 @@ import numpy as np
 from sklearn import decomposition, preprocessing
 from scipy import stats
 
+
 def percentile_above_zero(X, percentile=50):
     out = []
     for x in X:
@@ -11,12 +12,15 @@ def percentile_above_zero(X, percentile=50):
             out.append(0)
     return np.array(out)
 
-def assemble_features_from_data(df, n_syn_comp=5, n_branch_comp=3, n_syn_ego=5, model_dict=None):
+
+def assemble_features_from_data(
+    df, n_syn_comp=5, n_branch_comp=3, n_syn_ego=5, model_dict=None
+):
     df = df.copy()
     df["tip_len_dist_dendrite_p50"] = df["tip_len_dist_dendrite"].apply(
         lambda x: np.percentile(x, 75)
     )
-        
+
     df["tip_tort_dendrite_p50"] = df["tip_tort_dendrite"].apply(
         lambda x: np.percentile(x, 75)
     )
@@ -30,16 +34,12 @@ def assemble_features_from_data(df, n_syn_comp=5, n_branch_comp=3, n_syn_ego=5, 
     df["syn_size_distribution_dendrite_p50"] = df[
         "syn_size_distribution_dendrite"
     ].apply(np.median)
-    df["syn_size_distribution_dendrite_p15"] = df[
+    df["syn_size_distribution_dendrite_p10"] = df[
         "syn_size_distribution_dendrite"
-    ].apply(lambda x: np.percentile(x, 15))
-    df["syn_size_distribution_dendrite_p85"] = df[
+    ].apply(lambda x: np.percentile(x, 10))
+    df["syn_size_distribution_dendrite_p90"] = df[
         "syn_size_distribution_dendrite"
-    ].apply(lambda x: np.percentile(x, 85))
-    # df["syn_size_distribution_dendrite_dyn_range"] = (
-    #     df["syn_size_distribution_dendrite_p90"]
-    #     - df["syn_size_distribution_dendrite_p10"]
-    # )
+    ].apply(lambda x: np.percentile(x, 90))
     df["syn_size_dendrite_cv"] = df["syn_size_distribution_dendrite"].apply(
         np.std
     ) / df["syn_size_distribution_dendrite"].apply(np.mean)
@@ -55,9 +55,6 @@ def assemble_features_from_data(df, n_syn_comp=5, n_branch_comp=3, n_syn_ego=5, 
         lambda x: np.percentile(x, 97.5)
     )
     df["syn_depth_extent"] = df["syn_depth_dist_p95"] - df["syn_depth_dist_p5"]
-    df["l1_synapse_density"] = df["syn_depth_dist_all"].apply(
-        lambda x: np.sum(np.array(x)<50) / len(x)
-    )
 
     dbr = np.vstack(df["branches_dist"].values)
     if model_dict is None:
@@ -70,10 +67,11 @@ def assemble_features_from_data(df, n_syn_comp=5, n_branch_comp=3, n_syn_ego=5, 
         df[f"branch_svd{ii}"] = Xbr[:, ii]
 
     pl_dat = np.vstack(df["syn_count_depth_dendrite"].values)
+    pl_dat_norm = pl_dat / np.atleast_2d(pl_dat.sum(axis=1)).T
     if model_dict is None:
         syn_pca_pproc = preprocessing.StandardScaler()
         keep_dat_cols = np.sum(pl_dat, axis=0) > 0
-        pl_dat_z = syn_pca_pproc.fit_transform(pl_dat[:, keep_dat_cols])
+        pl_dat_z = syn_pca_pproc.fit_transform(pl_dat_norm[:, keep_dat_cols])
         syn_pca = decomposition.SparsePCA(n_components=n_syn_comp)
         X = syn_pca.fit_transform(pl_dat_z)
     else:
@@ -108,7 +106,6 @@ def assemble_features_from_data(df, n_syn_comp=5, n_branch_comp=3, n_syn_ego=5, 
         model_dict["syn_pca"] = syn_pca
         model_dict["ego_syn_pca"] = ego_syn_pca
         model_dict["ego_pproc"] = ego_pproc
-        
 
     pl_depth = np.vstack(df["path_length_depth_dendrite"].values)
     sc_depth = np.vstack(df["syn_count_depth_dendrite"].values)
@@ -128,6 +125,8 @@ def assemble_features_from_data(df, n_syn_comp=5, n_branch_comp=3, n_syn_ego=5, 
         "syn_dist_distribution_dendrite_p50",
         "syn_size_distribution_soma_p50",
         "syn_size_distribution_dendrite_p50",
+        "syn_size_distribution_dendrite_p10",
+        "syn_size_distribution_dendrite_p90",
         "syn_size_dendrite_cv",
         "syn_depth_dist_p5",
         "syn_depth_dist_p95",
@@ -135,7 +134,6 @@ def assemble_features_from_data(df, n_syn_comp=5, n_branch_comp=3, n_syn_ego=5, 
         "max_density",
         "radius_dist",
         "area_factor",
-        "l1_synapse_density",
     ]
 
     for ii in range(X.shape[1]):
@@ -146,4 +144,12 @@ def assemble_features_from_data(df, n_syn_comp=5, n_branch_comp=3, n_syn_ego=5, 
         dat_cols.append(f"ego_count_pca{ii}")
 
     return_cols = ["root_id", "soma_depth"] + dat_cols
-    return df[return_cols], dat_cols, syn_pca, svd_br, keep_dat_cols, ego_syn_pca, model_dict
+    return (
+        df[return_cols],
+        dat_cols,
+        syn_pca,
+        svd_br,
+        keep_dat_cols,
+        ego_syn_pca,
+        model_dict,
+    )

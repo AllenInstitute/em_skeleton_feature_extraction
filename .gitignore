@@ -121,3 +121,7 @@ notebooks/
 *.mp4
 *.tiff
 *.png
+*.pdf
+*.h5
+*.json
+*.feather
