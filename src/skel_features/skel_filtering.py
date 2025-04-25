@@ -2,11 +2,39 @@ import numpy as np
 import pandas as pd
 from meshparty import meshwork
 import copy
+from l2label.compartments import AxonLabel
+from typing import Optional
+from scipy import sparse
 
 anno_mask_dict = {
     "dendrite": "is_dendrite",
     "soma": "is_soma",
 }
+
+
+def output_synapses_per_compartment(nrn):
+    with nrn.mask_context(nrn.anno.is_axon.mesh_mask):
+        gr = nrn.skeleton.csgraph
+        N, inds = sparse.csgraph.connected_components(gr)
+
+        syn_per_comp = []
+        for ii in range(N):
+            mesh_idx = nrn.skeleton.SkeletonIndex(
+                np.flatnonzero(inds == ii)
+            ).to_mesh_index
+            syn_per_comp.append(
+                int(np.isin(nrn.anno.pre_syn.mesh_index, mesh_idx).sum())
+            )
+    return syn_per_comp
+
+
+def predict_axon(nrn, model_config: Optional[str] = None):
+    lbl = AxonLabel(model_config)
+    is_axon = lbl.predict_axon_mask(nrn, to_mesh_index=True)
+    if "is_axon" in nrn.anno.table_names:
+        nrn.anno.remove_annotations("is_axon")
+    nrn.anno.add_annotations("is_axon", np.flatnonzero(is_axon), mask=True)
+    return nrn
 
 
 def peel_sparse_segments(nrn, threshold, synapse_table="post_syn"):
@@ -156,14 +184,12 @@ def annotate_apical_from_syn_df(nrn, syn_df):
 def additional_component_masks(nrn, peel_threshold=0.1):
     "Apply soma, basal dendrite, and generic dendrite masks to a neuron"
 
-    apply_dendrite_mask(nrn)
-    if peel_threshold is not None or peel_threshold > 0:
-        peel_sparse_segments(nrn, peel_threshold)
-    dend_mask = nrn.mesh_mask.copy()
-    nrn.reset_mask()
-
+    if peel_threshold > 0:
+        predict_axon(nrn)
     nrn.anno.add_annotations(
-        anno_mask_dict["dendrite"], np.flatnonzero(dend_mask), mask=True
+        anno_mask_dict["dendrite"],
+        np.flatnonzero(~nrn.anno.is_axon.mesh_mask),
+        mask=True,
     )
     nrn.anno.add_annotations(anno_mask_dict["soma"], nrn.root_region, mask=True)
 
