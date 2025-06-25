@@ -224,7 +224,7 @@ def syn_count_binned(nrn, depth_bins, compartment=None, subset_query=None):
             return None
 
 
-def syn_count_dist_binned(nrn, dist_bins, subset_query=None):
+def _syn_count_dist_binned(nrn, dist_bins, subset_query=None):
     syn_df = nrn.anno.post_syn.df
     if subset_query is not None:
         syn_df = syn_df.query(subset_query).reset_index(drop=True)
@@ -233,11 +233,37 @@ def syn_count_dist_binned(nrn, dist_bins, subset_query=None):
     return syn_df.groupby("dist_bin", observed=False).size().values
 
 
-def path_length_dist_binned(nrn, dist_bins):
+def syn_count_dist_binned(nrn, dist_bins, compartment=None, subset_query=None):
+    if compartment is None:
+        return _syn_count_dist_binned(nrn, dist_bins, subset_query=subset_query)
+    else:
+        try:
+            with nrn.mask_context(
+                nrn.anno[anno_mask_dict[compartment]].mesh_mask
+            ) as nmc:
+                return _syn_count_dist_binned(nmc, dist_bins, subset_query=subset_query)
+        except:
+            return None
+
+
+def _path_length_dist_binned(nrn, dist_bins):
     pls = []
     for d_a, d_b in zip(dist_bins[:-1], dist_bins[1:]):
         pls.append(nrn.path_length(_is_between(nrn.distance_to_root(), d_a, d_b)))
     return np.array(pls)
+
+
+def path_length_dist_binned(nrn, dist_bins, compartment=None):
+    if compartment is None:
+        return _path_length_dist_binned(nrn, dist_bins)
+    else:
+        try:
+            with nrn.mask_context(
+                nrn.anno[anno_mask_dict[compartment]].mesh_mask
+            ) as nmc:
+                return _path_length_dist_binned(nmc, dist_bins)
+        except:
+            return None
 
 
 def syn_count_egocentric(nrn, soma_depth, rel_bins, subset_query=None):
@@ -351,12 +377,17 @@ def extract_features_dict(
             nrn, depth_bins, compartment="dendrite", subset_query='tag=="shaft"'
         ),
         "syn_count_dist_binned_shaft": syn_count_dist_binned(
-            nrn, dist_bins, subset_query='tag=="shaft"'
+            nrn,
+            dist_bins,
+            compartment="dendrite",
+            subset_query='tag=="shaft"',
         ),
         "syn_count_dist_binned_spine": syn_count_dist_binned(
-            nrn, dist_bins, subset_query='tag=="spine"'
+            nrn, dist_bins, compartment="dendrite", subset_query='tag=="spine"'
         ),
-        "dendrite_length_binned": path_length_dist_binned(nrn, dist_bins),
+        "dendrite_length_binned": path_length_dist_binned(
+            nrn, dist_bins, compartment="dendrite"
+        ),
         "radius_dist": median_radius_distal(nrn, dist=30),
         "area_factor": area_factor(nrn),
         "egocentric_bins": syn_count_egocentric(nrn, soma_depth(nrn), egocentric_bins),
@@ -412,7 +443,7 @@ def extract_features_root_id(
     max_dist,
     n_egocentric_bins=14,
     rerun=False,
-    peel_threshold=0,
+    model_config=None,
     synapse_transform="nm",
     save_synapse_count=False,
 ):
@@ -422,7 +453,7 @@ def extract_features_root_id(
             if dat["success"] is True:
                 return True
     try:
-        nrn = load_root_id(root_id, skel_dir, peel_threshold=peel_threshold)
+        nrn = load_root_id(root_id, skel_dir, model_config=model_config)
         if save_synapse_count:
             output_by_compartment = output_synapses_per_compartment(nrn)
             with open(f"{feature_dir}/{root_id}_syn_count.json", "w") as f:
@@ -452,7 +483,7 @@ def extract_features_mp(
     dist_bins=5,
     max_dist=200,
     n_egocentric_bins=14,
-    peel_threshold=0,
+    model_config=None,
     synapse_transform="nm",
     rerun=False,
     save_synapse_count=False,
@@ -471,7 +502,7 @@ def extract_features_mp(
             [max_dist] * len(root_ids),
             [n_egocentric_bins] * len(root_ids),
             [rerun] * len(root_ids),
-            [peel_threshold] * len(root_ids),
+            [model_config] * len(root_ids),
             [synapse_transform] * len(root_ids),
             [save_synapse_count] * len(root_ids),
         )

@@ -181,11 +181,11 @@ def annotate_apical_from_syn_df(nrn, syn_df):
     )
 
 
-def additional_component_masks(nrn, peel_threshold=0.1):
+def additional_component_masks(nrn, model_config=None):
     "Apply soma, basal dendrite, and generic dendrite masks to a neuron"
 
-    if peel_threshold > 0:
-        predict_axon(nrn)
+    if model_config is not None:
+        predict_axon(nrn, model_config=model_config)
     nrn.anno.add_annotations(
         anno_mask_dict["dendrite"],
         np.flatnonzero(~nrn.anno.is_axon.mesh_mask),

@@ -27,6 +27,7 @@ dependencies = [
     "nglui>=3.8.2",
     "ipywidgets>=8.1.5",
     "pcg-skel>=1.3.0",
+    "pot>=0.9.5",
 ]
 
 [tool.uv.sources]

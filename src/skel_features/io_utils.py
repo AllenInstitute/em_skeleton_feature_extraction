@@ -18,7 +18,7 @@ GSClient(storage_client=storage_client).set_as_default_client()
 S3Client(no_sign_request=True).set_as_default_client()
 
 
-def load_root_id(oid, nrn_dir, peel_threshold=0):
+def load_root_id(oid, nrn_dir, model_config=None):
     "Load and apply dendrite labels to a neuron based on pre-classified synapse apical labels and more"
     cpath = AnyPath(nrn_dir)
     if isinstance(oid, str):
@@ -28,11 +28,11 @@ def load_root_id(oid, nrn_dir, peel_threshold=0):
     with open(cpath / filename, "rb") as f:
         nrn = meshwork.load_meshwork(f)
         nrn.reset_mask()
-    filtering.additional_component_masks(nrn, peel_threshold=peel_threshold)
+    filtering.additional_component_masks(nrn, model_config=model_config)
     return nrn
 
 
-def load_features(root_ids, feature_dir, peel_threshold=0):
+def load_features(root_ids, feature_dir):
     "Load a feature dataframe from a directory"
     dats = []
     dpath = AnyPath(feature_dir)
