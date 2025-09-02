@@ -125,3 +125,6 @@ notebooks/
 *.h5
 *.json
 *.feather
+*.npy
+*.ipynb
+*.ipynb_checkpoints/
