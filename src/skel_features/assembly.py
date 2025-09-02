@@ -23,11 +23,11 @@ def assemble_features_from_data(
     use_spines=False,
 ):
     df = df.copy()
-    df["tip_len_dist_dendrite_p50"] = df["tip_len_dist_dendrite"].apply(
+    df["tip_len_dist_dendrite_p75"] = df["tip_len_dist_dendrite"].apply(
         lambda x: np.percentile(x, 75)
     )
 
-    df["tip_tort_dendrite_p50"] = df["tip_tort_dendrite"].apply(
+    df["tip_tort_dendrite_p75"] = df["tip_tort_dendrite"].apply(
         lambda x: np.percentile(x, 75)
     )
 
@@ -53,12 +53,12 @@ def assemble_features_from_data(
     df["syn_size_distribution_dendrite_p50"] = df[
         "syn_size_distribution_dendrite"
     ].apply(np.median)
-    df["syn_size_distribution_dendrite_p10"] = df[
+    df["syn_size_distribution_dendrite_p5"] = df[
         "syn_size_distribution_dendrite"
-    ].apply(lambda x: np.percentile(x, 10))
-    df["syn_size_distribution_dendrite_p90"] = df[
+    ].apply(lambda x: np.percentile(x, 5))
+    df["syn_size_distribution_dendrite_p95"] = df[
         "syn_size_distribution_dendrite"
-    ].apply(lambda x: np.percentile(x, 90))
+    ].apply(lambda x: np.percentile(x, 95))
     df["syn_size_dendrite_cv"] = df["syn_size_distribution_dendrite"].apply(
         np.std
     ) / df["syn_size_distribution_dendrite"].apply(np.mean)
@@ -67,10 +67,10 @@ def assemble_features_from_data(
         df["syn_size_distribution_spine_dendrite_p50"] = df[
             "syn_size_distribution_spine_dendrite"
         ].apply(np.median)
-        df["syn_size_distribution_spine_dendrite_p10"] = df[
+        df["syn_size_distribution_spine_dendrite_p5"] = df[
             "syn_size_distribution_spine_dendrite"
-        ].apply(lambda x: np.percentile(x, 10))
-        df["syn_size_distribution_spine_dendrite_p90"] = df[
+        ].apply(lambda x: np.percentile(x, 5))
+        df["syn_size_distribution_spine_dendrite_p95"] = df[
             "syn_size_distribution_spine_dendrite"
         ].apply(lambda x: np.percentile(x, 90))
         df["syn_size_spine_dendrite_cv"] = df[
@@ -82,12 +82,12 @@ def assemble_features_from_data(
         df["syn_size_distribution_shaft_dendrite_p50"] = df[
             "syn_size_distribution_shaft_dendrite"
         ].apply(np.median)
-        df["syn_size_distribution_shaft_dendrite_p10"] = df[
+        df["syn_size_distribution_shaft_dendrite_p5"] = df[
             "syn_size_distribution_shaft_dendrite"
-        ].apply(lambda x: np.percentile(x, 10))
-        df["syn_size_distribution_shaft_dendrite_p90"] = df[
+        ].apply(lambda x: np.percentile(x, 5))
+        df["syn_size_distribution_shaft_dendrite_p95"] = df[
             "syn_size_distribution_shaft_dendrite"
-        ].apply(lambda x: np.percentile(x, 90))
+        ].apply(lambda x: np.percentile(x, 95))
         df["syn_size_shaft_dendrite_cv"] = df[
             "syn_size_distribution_shaft_dendrite"
         ].apply(np.std) / (
@@ -140,13 +140,13 @@ def assemble_features_from_data(
                     f"shaft_density_binned_{ii}",
                 ]
             )
-    df["syn_depth_dist_p5"] = df["syn_depth_dist_all"].apply(
-        lambda x: np.percentile(x, 2.5)
+    df["syn_depth_dist_p1"] = df["syn_depth_dist_all"].apply(
+        lambda x: np.percentile(x, 1)
     )
-    df["syn_depth_dist_p95"] = df["syn_depth_dist_all"].apply(
-        lambda x: np.percentile(x, 97.5)
+    df["syn_depth_dist_p99"] = df["syn_depth_dist_all"].apply(
+        lambda x: np.percentile(x, 99)
     )
-    df["syn_depth_extent"] = df["syn_depth_dist_p95"] - df["syn_depth_dist_p5"]
+    df["syn_depth_extent"] = df["syn_depth_dist_p99"] - df["syn_depth_dist_p1"]
 
     dbr = np.vstack(df["branches_dist"].values)
     if model_dict is None:
@@ -220,8 +220,8 @@ def assemble_features_from_data(
         df["median_density_shaft"] = percentile_above_zero(density_nan_shaft, 50)
 
     dat_cols = [
-        "tip_len_dist_dendrite_p50",
-        "tip_tort_dendrite_p50",
+        "tip_len_dist_dendrite_p75",
+        "tip_tort_dendrite_p75",
         "num_syn_dendrite",
         "num_syn_soma",
         "path_length_dendrite",
@@ -229,11 +229,11 @@ def assemble_features_from_data(
         "syn_dist_distribution_dendrite_p50",
         "syn_size_distribution_soma_p50",
         "syn_size_distribution_dendrite_p50",
-        "syn_size_distribution_dendrite_p10",
-        "syn_size_distribution_dendrite_p90",
+        "syn_size_distribution_dendrite_p5",
+        "syn_size_distribution_dendrite_p95",
         "syn_size_dendrite_cv",
-        "syn_depth_dist_p5",
-        "syn_depth_dist_p95",
+        "syn_depth_dist_p1",
+        "syn_depth_dist_p99",
         "syn_depth_extent",
         "median_density",
         "radius_dist",
@@ -245,12 +245,12 @@ def assemble_features_from_data(
             "syn_dist_distribution_dendrite_shaft_p50",
             "dend_spine_shaft_offset",
             "syn_size_distribution_spine_dendrite_p50",
-            "syn_size_distribution_spine_dendrite_p10",
-            "syn_size_distribution_spine_dendrite_p90",
+            "syn_size_distribution_spine_dendrite_p5",
+            "syn_size_distribution_spine_dendrite_p95",
             "syn_size_spine_dendrite_cv",
             "syn_size_distribution_shaft_dendrite_p50",
-            "syn_size_distribution_shaft_dendrite_p10",
-            "syn_size_distribution_shaft_dendrite_p90",
+            "syn_size_distribution_shaft_dendrite_p5",
+            "syn_size_distribution_shaft_dendrite_p95",
             "syn_size_shaft_dendrite_cv",
             "frac_syn_spine_soma",
             "frac_syn_spine_dendrite",
